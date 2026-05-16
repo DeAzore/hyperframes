@@ -55,10 +55,16 @@ function copyMdFiles(srcDir, destDir) {
 }
 
 async function main() {
-  for (const sub of ["studio", "docs", "templates", "skills", "docker"]) {
+  for (const sub of ["studio", "docs", "templates", "skills", "docker", "capture"]) {
     mkdirSync(join(DIST, sub), { recursive: true });
   }
   mkdirSync(join(DIST, "commands"), { recursive: true });
+
+  // Copy Scrapling Python bridge so it ships alongside the compiled capture module.
+  const scraplingBridge = join(CLI_ROOT, "src", "capture", "scrapling-bridge.py");
+  if (existsSync(scraplingBridge)) {
+    cpSync(scraplingBridge, join(DIST, "capture", "scrapling-bridge.py"));
+  }
 
   const studioDist = resolve(CLI_ROOT, "..", "studio", "dist");
   await waitForStudioDist(studioDist);

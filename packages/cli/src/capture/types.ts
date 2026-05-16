@@ -28,6 +28,12 @@ export interface CaptureOptions {
   skipAssets?: boolean;
   /** Output JSON for programmatic use */
   json?: boolean;
+  /**
+   * Use Scrapling StealthyFetcher (Playwright-based) when Puppeteer is blocked.
+   * Without this flag, the basic Scrapling HTTP fetcher is tried automatically.
+   * Requires: pip install "scrapling[fetchers]" && scrapling install
+   */
+  stealthy?: boolean;
 }
 
 export interface CaptureResult {
