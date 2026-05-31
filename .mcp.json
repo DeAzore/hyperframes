@@ -1,8 +1,7 @@
 {
   "mcpServers": {
     "datagouv": {
-      "command": "npx",
-      "args": ["mcp-remote", "https://mcp.data.gouv.fr/mcp"]
+      "url": "https://mcp.data.gouv.fr/mcp"
     }
   }
 }
