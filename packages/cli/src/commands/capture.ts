@@ -29,6 +29,12 @@ export default defineCommand({
       description: "Skip downloading assets (images, SVGs)",
       default: false,
     },
+    stealthy: {
+      type: "boolean",
+      description:
+        'Use Scrapling StealthyFetcher (Playwright) to bypass anti-bot when Puppeteer is blocked. Requires: pip install "scrapling[fetchers]" && scrapling install',
+      default: false,
+    },
     "max-screenshots": {
       type: "string",
       description: "Maximum screenshots to capture (default: 24)",
@@ -79,6 +85,7 @@ export default defineCommand({
           url,
           outputDir,
           skipAssets: args["skip-assets"] as boolean,
+          stealthy: args.stealthy as boolean,
           maxScreenshots: args["max-screenshots"]
             ? parseInt(args["max-screenshots"] as string)
             : undefined,

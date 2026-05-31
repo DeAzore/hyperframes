@@ -52,6 +52,7 @@ export async function captureWebsite(
     settleTime = 3000,
     maxScreenshots: _maxScreenshots = 24,
     skipAssets = false,
+    stealthy = false,
   } = opts;
 
   const warnings: string[] = [];
@@ -211,6 +212,40 @@ export async function captureWebsite(
           " chars) — may be blocked or a client-rendered SPA that needs more time";
       warnings.push(reason);
       progress("warn", reason);
+
+      // Attempt Scrapling HTTP fallback when the page is blocked.
+      // Scrapling impersonates real browser TLS fingerprints, which bypasses
+      // IP-reputation and header-based bot filters (not JS challenges).
+      // On success we inject the fetched HTML into the live Puppeteer page so
+      // all existing extractors (tokens, text, assets) continue to work.
+      try {
+        const { isScraplingAvailable, fetchWithScrapling } = await import("./scraplingFetcher.js");
+        if (await isScraplingAvailable()) {
+          progress(
+            "scrapling",
+            stealthy
+              ? "Retrying with Scrapling StealthyFetcher (Playwright)..."
+              : "Retrying with Scrapling HTTP fetcher...",
+          );
+          const scrapled = await fetchWithScrapling(url, stealthy);
+          if (scrapled.html && scrapled.html.length > 200) {
+            await page1.setContent(scrapled.html, { waitUntil: "domcontentloaded" });
+            // Replace the blocking warning now that we have real content
+            const warnIdx = warnings.indexOf(reason);
+            if (warnIdx !== -1) warnings.splice(warnIdx, 1);
+            warnings.push(
+              `Anti-bot bypass via Scrapling${stealthy ? " StealthyFetcher" : ""} — screenshots may be limited (no JS execution)`,
+            );
+            progress("scrapling", `Scrapling fetched "${scrapled.title || url}"`);
+          } else {
+            warnings.push("Scrapling fallback returned empty content");
+          }
+        }
+      } catch (scraplingErr) {
+        warnings.push(
+          `Scrapling fallback unavailable: ${scraplingErr instanceof Error ? scraplingErr.message : String(scraplingErr)}`,
+        );
+      }
     }
 
     // Scroll through page to trigger lazy-loaded images and Lottie animations
