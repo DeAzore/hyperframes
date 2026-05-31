@@ -55,11 +55,12 @@ MAX_SCORE = sum(SCORE_WEIGHTS.values())  # 100
 
 def search_sirene(naf_code: str, ville: str | None, limit: int) -> list[dict]:
     """Cherche des entreprises via l'API recherche-entreprises.api.gouv.fr."""
-    params = {
-        "code_naf": naf_code,
-        "code_departement": DEPARTEMENT,
+    params: dict[str, str | int] = {
+        "activite_principale": naf_code,   # ex: 8690D
+        "departement": DEPARTEMENT,        # ex: 13
         "per_page": min(limit, 25),
         "page": 1,
+        "etat_administratif": "A",         # uniquement les entreprises actives
     }
     if ville:
         params["q"] = ville
@@ -67,9 +68,20 @@ def search_sirene(naf_code: str, ville: str | None, limit: int) -> list[dict]:
     url = f"{SIRENE_API}?{urlencode(params)}"
     req = Request(url, headers={"User-Agent": "prospect-finder/1.0 (contact@deazore.fr)"})
     try:
-        with urlopen(req, timeout=10) as resp:
+        with urlopen(req, timeout=15) as resp:
             data = json.loads(resp.read())
-            return data.get("results", [])
+            results = data.get("results", [])
+            if not results:
+                # Fallback : recherche texte libre si filtre NAF renvoie rien
+                print(f"   (filtre NAF vide — tentative recherche textuelle)", file=sys.stderr)
+                params.pop("activite_principale", None)
+                params["q"] = ville or "bien-être santé"
+                url2 = f"{SIRENE_API}?{urlencode(params)}"
+                req2 = Request(url2, headers={"User-Agent": "prospect-finder/1.0"})
+                with urlopen(req2, timeout=15) as resp2:
+                    data2 = json.loads(resp2.read())
+                    results = data2.get("results", [])
+            return results
     except URLError as e:
         print(f"⚠  SIRENE API error: {e}", file=sys.stderr)
         return []
